@@ -2,131 +2,81 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>Hero Rescue: Ultra Edition</title>
+    <title>Hero Rescue: Ultimate Edition</title>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
     <style>
         body { margin: 0; background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
-        canvas { border: 5px solid #332211; border-radius: 10px; box-shadow: 0 0 30px rgba(255,100,0,0.3); }
+        canvas { border: 5px solid #3d2511; border-radius: 10px; box-shadow: 0 0 40px rgba(0,0,0,0.8); }
     </style>
 </head>
 <body>
 <script>
-// --- 고퀄리티 에셋 자동 생성기 ---
-function createHighQualityAssets(scene) {
-    // 1. 히어로 (갑옷 입은 전사 느낌)
-    const heroCanvas = scene.textures.createCanvas('hero', 64, 64);
-    const ctx = heroCanvas.getContext();
-    ctx.fillStyle = '#ff3333'; ctx.fillRect(15, 30, 34, 30); // 몸체
-    ctx.fillStyle = '#ffccaa'; ctx.beginPath(); ctx.arc(32, 20, 15, 0, Math.PI*2); ctx.fill(); // 얼굴
-    ctx.fillStyle = '#333'; ctx.fillRect(17, 5, 30, 15); // 머리카락
-    ctx.fillStyle = '#4444ff'; ctx.fillRect(15, 45, 10, 15); ctx.fillRect(39, 45, 10, 15); // 다리
-    heroCanvas.refresh();
-
-    // 2. 보물 (금화 더미 느낌)
-    const goldCanvas = scene.textures.createCanvas('gold', 32, 32);
-    const gtx = goldCanvas.getContext();
-    const grad = gtx.createRadialGradient(16, 16, 2, 16, 16, 15);
-    grad.addColorStop(0, '#fff500'); grad.addColorStop(1, '#b8860b');
-    gtx.fillStyle = grad; gtx.beginPath(); gtx.arc(16, 16, 14, 0, Math.PI*2); gtx.fill();
-    gtx.strokeStyle = '#8b4513'; gtx.lineWidth = 2; gtx.stroke();
-    goldCanvas.refresh();
-
-    // 3. 용암 (이글거리는 질감)
-    const lavaCanvas = scene.textures.createCanvas('lava', 64, 64);
-    const ltx = lavaCanvas.getContext();
-    ltx.fillStyle = '#ff4500'; ltx.fillRect(0, 0, 64, 64);
-    for(let i=0; i<10; i++) {
-        ltx.fillStyle = '#ff8c00';
-        ltx.beginPath(); ltx.arc(Math.random()*64, Math.random()*64, 10, 0, Math.PI*2); ltx.fill();
-    }
-    lavaCanvas.refresh();
-
-    // 4. 벽 (돌벽 텍스처)
-    const wallCanvas = scene.textures.createCanvas('wall', 64, 64);
-    const wtx = wallCanvas.getContext();
-    wtx.fillStyle = '#444'; wtx.fillRect(0, 0, 64, 64);
-    wtx.strokeStyle = '#222'; wtx.lineWidth = 2;
-    wtx.strokeRect(2, 2, 60, 28); wtx.strokeRect(2, 32, 60, 28);
-    wallCanvas.refresh();
-
-    // 5. 핀 (황금 손잡이 핀)
-    const pinCanvas = scene.textures.createCanvas('pin', 200, 24);
-    const ptx = pinCanvas.getContext();
-    ptx.fillStyle = '#888'; ptx.fillRect(0, 8, 170, 8); // 침
-    ptx.fillStyle = '#ffd700'; ptx.beginPath(); ptx.arc(185, 12, 12, 0, Math.PI*2); ptx.fill(); // 손잡이
-    ptx.strokeStyle = '#b8860b'; ptx.stroke();
-    pinCanvas.refresh();
-}
-
 const config = {
     type: Phaser.AUTO,
     width: 450,
     height: 800,
-    physics: { default: 'matter', matter: { gravity: { y: 1 }, debug: false } },
-    scene: {
-        create: function() {
-            createHighQualityAssets(this);
-            this.cameras.main.setBackgroundColor('#1a1005');
-            
-            this.score = 0;
-            this.levelY = 600;
-
-            // 배경 숲 느낌
-            for(let i=0; i<5; i++) {
-                this.add.rectangle(Math.random()*450, Math.random()*800, 100, 200, 0x0a2a0a).setAlpha(0.3);
-            }
-
-            this.hero = this.matter.add.sprite(225, 700, 'hero').setFixedRotation();
-            
-            // 초기 바닥
-            this.matter.add.rectangle(225, 780, 450, 40, { isStatic: true });
-
-            // 첫 번째 방 생성
-            this.spawnRoom = () => {
-                const y = this.levelY;
-                // 왼쪽 벽, 오른쪽 벽
-                this.matter.add.image(50, y, 'wall', null, { isStatic: true }).setScale(1, 6);
-                this.matter.add.image(400, y, 'wall', null, { isStatic: true }).setScale(1, 6);
-                
-                // 핀
-                const pin = this.matter.add.image(180, y + 50, 'pin', null, { isStatic: true });
-                pin.setInteractive().isPin = true;
-
-                // 보물 or 용암 랜덤 생성
-                if(Math.random() > 0.4) {
-                    for(let i=0; i<12; i++) {
-                        let g = this.matter.add.image(150 + Math.random()*150, y - 100, 'gold').setCircle(14);
-                        g.setOnCollideWith(this.hero.body, () => { g.destroy(); this.score += 10; scoreTxt.setText("GOLD: " + this.score); });
-                    }
-                } else {
-                    let lava = this.matter.add.image(225, y - 100, 'lava', null, { isStatic: false }).setScale(4, 0.8);
-                    lava.setOnCollideWith(this.hero.body, () => { alert("Game Over! Score: " + this.score); location.reload(); });
-                }
-                this.levelY -= 400;
-            };
-
-            for(let i=0; i<3; i++) this.spawnRoom();
-
-            const scoreTxt = this.add.text(20, 20, "GOLD: 0", { fontSize: '32px', fontWeight: 'bold', fill: '#ffd700' }).setScrollFactor(0);
-            
-            this.input.on('gameobjectdown', (pointer, obj) => {
-                if(obj.isPin) {
-                    this.tweens.add({ targets: obj, x: obj.x - 400, duration: 400, onComplete: () => { 
-                        this.matter.world.remove(obj); obj.destroy(); 
-                    }});
-                }
-            });
-
-            this.cameras.main.startFollow(this.hero, true, 0.1, 0.1);
-        },
-        update: function() {
-            if(this.hero.y < this.levelY + 1200) this.spawnRoom();
-            if(this.hero.y > 1500) { alert("낙사했습니다!"); location.reload(); }
-        }
-    }
+    physics: { default: 'matter', matter: { gravity: { y: 1.5 }, debug: false } },
+    scene: { preload: preload, create: create }
 };
 
 const game = new Phaser.Game(config);
+
+function preload() {
+    // 1단계에서 다운로드한 이미지 파일들을 로드합니다.
+    this.load.image('hero', 'hero.png');
+    this.load.image('gold', 'gold.png');
+    this.load.image('lava', 'lava.png');
+    this.load.image('wall', 'wall.png');
+    this.load.image('pin', 'pin.png');
+}
+
+function create() {
+    // 배경색 설정 (어두운 던전 느낌)
+    this.cameras.main.setBackgroundColor('#1a1005');
+
+    // 1. 캐릭터 생성
+    const hero = this.matter.add.sprite(225, 700, 'hero').setFixedRotation().setScale(0.8);
+
+    // 2. 핀 생성 (가로, 세로, 대각선 모두 가능)
+    const pin1 = this.matter.add.image(225, 400, 'pin', null, { isStatic: true });
+    pin1.setInteractive().isPin = true;
+    pin1.setAngle(0); // 가로 핀
+
+    const pin2 = this.matter.add.image(100, 300, 'pin', null, { isStatic: true });
+    pin2.setInteractive().isPin = true;
+    pin2.setAngle(90); // 세로 핀
+
+    // 3. 보물 및 용암 생성
+    // 금화 더미
+    for(let i=0; i<15; i++) {
+        this.matter.add.image(180 + Math.random()*80, 200, 'gold').setCircle(15);
+    }
+
+    // 용암
+    let lava = this.matter.add.image(225, 100, 'lava', null, { isStatic: false }).setScale(3, 1);
+
+    // 4. 벽 생성
+    // 바닥
+    this.matter.add.image(225, 780, 'wall', null, { isStatic: true }).setScale(7, 0.5);
+    // 왼쪽 벽, 오른쪽 벽
+    this.matter.add.image(50, 400, 'wall', null, { isStatic: true }).setScale(1, 12);
+    this.matter.add.image(400, 400, 'wall', null, { isStatic: true }).setScale(1, 12);
+
+    // 핀 제거 클릭 이벤트
+    this.input.on('gameobjectdown', (pointer, gameObject) => {
+        if(gameObject.isPin) {
+            this.tweens.add({
+                targets: gameObject,
+                alpha: 0,
+                x: gameObject.x - 400,
+                duration: 500,
+                onComplete: () => { gameObject.destroy(); }
+            });
+        }
+    });
+
+    this.add.text(10, 10, "고퀄리티 이미지 적용 버전", { fill: '#fff' });
+}
 </script>
 </body>
 </html>
