@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hero Rescue Infinity</title>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
+    <style>
+        body { margin: 0; background: #1a1a1a; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; font-family: sans-serif; }
+        canvas { box-shadow: 0 0 50px rgba(0,0,0,0.5); border: 4px solid #444; }
+    </style>
+</head>
+<body>
+<script>
+// --- 이미지 에셋 (SVG Data URI) ---
+const ASSETS = {
+    hero: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIzMiIgY3k9IjIwIiByPSIxNSIgZmlsbD0iI0ZGM0QzRCIvPjxyZWN0IHg9IjE1IiB5PSIzNSIgd2lkdGg9IjM0IiBoZWlnaHQ9IjI1IiByeD0iNSIgZmlsbD0iIzNCNEZGRiIvPjxwYXRoIGQ9Ik0yMCAyMEwyNSAyNU00MCAyMEwzNSAyNSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyIi8+PC9zdmc+',
+    gold: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIxMCIgZmlsbD0iI0ZGRDcwMCIgc3Ryb2tlPSIjQjg4NjBCIiBzdHJva2Utd2lkdGg9IjIiLz48dGV4dCB4PSI4IiB5PSIxNyIgZmlsbD0iI0I4ODYwQiIgZm9udC1zaXplPSIxMiIgZm9udC13ZWlnaHQ9ImJvbGQiPiQ8L3RleHQ+PC9zdmc+',
+    lava: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIGZpbGw9IiNGRjQ1MDAiLz48cGF0aCBkPSJNMCAzMFEyMCAxMCA0MCAzMFQ2NCAzMCIgc3Ryb2tlPSIjRkZBMDUwIiBzdHJva2Utd2lkdGg9IjQiIGZpbGw9Im5vbmUiLz48L3N2Zz4=',
+    wall: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIGZpbGw9IiM1NTUiLz48cmVjdCB4PSIyIiB5PSIyIiB3aWR0aD0iNjAiIGhlaWdodD0iMzAiIGZpbGw9IiM3NzciLz48cmVjdCB4PSIyIiB5PSIzNCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjI4IiBmaWxsPSIjNzc3Ii8+PC9zdmc+',
+    pin: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwIiB2aWV3Qm94PSIwIDAgMjAwIDIwIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHg9IjAiIHk9IjUiIHdpZHRoPSIxODAiIGhlaWdodD0iMTAiIGZpbGw9IiNDMEMwQzAiLz48Y2lyY2xlIGN4PSIxOTAiIGN5PSIxMCIgcj0iMTAiIGZpbGw9IiNGRDU1NTUiLz48L3N2Zz4='
+};
+
+const config = {
+    type: Phaser.AUTO,
+    width: 400,
+    height: 700,
+    physics: { default: 'matter', matter: { gravity: { y: 0.8 }, debug: false } },
+    scene: { preload: preload, create: create, update: update }
+};
+
+const game = new Phaser.Game(config);
+let hero, pins = [], levelY = 500, score = 0, scoreText;
+
+function preload() {
+    Object.keys(ASSETS).forEach(key => this.load.image(key, ASSETS[key]));
+}
+
+function create() {
+    this.cameras.main.setBackgroundColor('#2c3e50');
+    scoreText = this.add.text(20, 20, 'Score: 0', { fontSize: '24px', fill: '#fff' }).setScrollFactor(0).setDepth(100);
+
+    // 초기 바닥
+    this.matter.add.rectangle(200, 650, 400, 100, { isStatic: true, label: 'ground' });
+
+    // 히어로 생성
+    hero = this.matter.add.sprite(200, 550, 'hero').setFixedRotation();
+    
+    // 무한 생성을 위한 첫 방
+    spawnNextRoom.call(this);
+
+    this.input.on('gameobjectdown', (pointer, obj) => {
+        if(obj.isPin) {
+            this.tweens.add({
+                targets: obj,
+                x: obj.x + 400,
+                duration: 300,
+                onComplete: () => {
+                    this.matter.world.remove(obj.body);
+                    obj.destroy();
+                }
+            });
+        }
+    });
+
+    this.cameras.main.startFollow(hero, true, 0.1, 0.1);
+}
+
+function update() {
+    // 히어로가 위로 올라가면 다음 방 생성
+    if (hero.y < levelY + 200) {
+        spawnNextRoom.call(this);
+    }
+
+    // 사망 체크 (간단히 화면 밖으로 나가거나 하면 리로드)
+    if (hero.y > levelY + 1000) {
+        alert("게임 오버! 최종 점수: " + score);
+        location.reload();
+    }
+}
+
+function spawnNextRoom() {
+    const x = 200;
+    levelY -= 350; // 위로 쌓기
+    
+    // 벽 생성
+    this.matter.add.image(50, levelY, 'wall', null, { isStatic: true }).setScale(1, 6);
+    this.matter.add.image(350, levelY, 'wall', null, { isStatic: true }).setScale(1, 6);
+
+    // 랜덤 패턴 생성
+    const rand = Math.random();
+    if (rand > 0.5) {
+        // 보물 방
+        createPin.call(this, 200, levelY + 50);
+        for(let i=0; i<5; i++) {
+            let g = this.matter.add.image(180 + (i*10), levelY - 50, 'gold').setCircle(10);
+            g.setOnCollideWith(hero.body, () => { g.destroy(); score += 10; scoreText.setText('Score: ' + score); });
+        }
+    } else {
+        // 위험 방 (용암)
+        createPin.call(this, 200, levelY + 50);
+        let l = this.matter.add.image(200, levelY - 50, 'lava', null, { isStatic: false }).setScale(2.5, 0.5);
+        l.setOnCollideWith(hero.body, () => { alert("용암에 닿았습니다! 점수: " + score); location.reload(); });
+    }
+}
+
+function createPin(x, y) {
+    let p = this.matter.add.image(x - 50, y, 'pin', null, { isStatic: true });
+    p.isPin = true;
+    p.setInteractive();
+    return p;
+}
+</script>
+</body>
+</html>
